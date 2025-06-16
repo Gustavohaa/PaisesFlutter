@@ -1,20 +1,35 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:paises/models/country.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:paises/controllers/country_controller.dart';
+import 'package:paises/services/country_service.dart';
 
 void main() {
-  test('Deve criar Country a partir do JSON', () {
-    final json = {
-      'name': {'common': 'Brasil'},
-      'flags': {'png': 'https://flagcdn.com/br.png'},
-      'capital': ['Brasília'],
-      'population': 211000000,
-    };
+    test('Cenário 05 – País com dados incompletos', () async {
+    final mockClient = MockClient((request) async {
+      return http.Response(
+        jsonEncode([
+          {
+            'name': {'common': 'País X'},
+            'flags': {},
+            'capital': [],
+            'population': 123456,
+          },
+        ]),
+        200,
+      );
+    });
 
-    final country = Country.fromJson(json);
+    final service = CountryService(client: mockClient);
+    final controller = CountryController(service);
 
-    expect(country.name, 'Brasil');
-    expect(country.flag, 'https://flagcdn.com/br.png');
-    expect(country.capital, 'Brasília');
-    expect(country.population, 211000000);
+    final countries = await controller.getCountries();
+
+    expect(countries, isNotEmpty);
+    expect(countries.first.name, 'País X');
+    expect(countries.first.capital, 'Sem capital');
+    expect(countries.first.flag, isEmpty);
   });
 }
